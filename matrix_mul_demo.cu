@@ -47,7 +47,7 @@ int main()
 
 	MatrixIn *in;
 	MatrixOut *out;
-/*
+
 	// test thread sync task
 	std::string queue_name = "cuda_matrix_mul";
 	MatMulSyncTask *sync_task = CUDATaskFactory::create_matmul_sync_task<MatrixIn, MatrixOut>
@@ -70,7 +70,7 @@ int main()
     while (!finish)
         pthread_cond_wait(&cond, &mutex);
     pthread_mutex_unlock(&mutex);
-*/
+/*
 	// test async task
 	MatMulAsyncTask *async_task = CUDATaskFactory::create_matmul_async_task<MatrixIn, MatrixOut>
 										(block_num, thread_per_block, check_async_result);
@@ -92,7 +92,7 @@ int main()
     while (!finish)
         pthread_cond_wait(&cond, &mutex);
     pthread_mutex_unlock(&mutex);
-
+*/
 	return 0;
 }
 
