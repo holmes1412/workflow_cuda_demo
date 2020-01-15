@@ -11,13 +11,16 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 bool finish = false;
 
-typedef WFThreadTask<MatrixIn, MatrixOut> MatMulTask;
+typedef MatrixIn<int> matrix_in;
+typedef MatrixOut<int> matrix_out;
+
+typedef WFThreadTask<matrix_in, matrix_out> MatMulTask;
 
 void check_sync_result(MatMulTask *task)
 {
 	fprintf(stderr, "checking in ThreadTask callback.\n");
-	MatrixIn *in = task->get_input();
-	MatrixOut *out = task->get_output();
+	matrix_in *in = task->get_input();
+	matrix_out *out = task->get_output();
 	matrix_check(in, out);
     pthread_mutex_lock(&mutex);
     finish = true;
@@ -31,11 +34,11 @@ int main()
 	dim3 block_num((COL + thread_per_block.x - 1) / thread_per_block.x,
 				   (ROW + thread_per_block.y - 1) / thread_per_block.y);
 
-	MatrixIn *in;
-	MatrixOut *out;
+	matrix_in *in;
+	matrix_out *out;
 
 	// test thread sync task
-	MatMulTask *sync_task = CudaTaskFactory::create_matmul_task<MatrixIn, MatrixOut>
+	MatMulTask *sync_task = CudaTaskFactory::create_matmul_task<matrix_in, matrix_out>
 									(block_num, thread_per_block, check_sync_result);
 
 	in = sync_task->get_input();

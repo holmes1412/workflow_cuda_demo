@@ -8,7 +8,7 @@ class MatrixIn;
 class MatrixOut;
 typedef CUDATask<MatrixIn, MatrixOut> CudaMMTask;
 */
-
+template<typename T>
 class MatrixIn
 {
 public:
@@ -25,10 +25,11 @@ public:
 		this->col = col;
 	}
 	
-	int *a, *b;
+	T *a, *b;
 	int row, col;
 };
 
+template<typename T>
 class MatrixOut
 {
 public:
@@ -44,7 +45,7 @@ public:
 		this->col = col;
 	}
 
-	int *c;
+	T *c;
 	int row, col;
 };
 
@@ -66,7 +67,7 @@ void matrix_mul_cpu(int *a, int* b, int* c, int width)
 	}
 }
 
-inline void matrix_check(MatrixIn *in, MatrixOut *out)
+inline void matrix_check(MatrixIn<int> *in, MatrixOut<int> *out)
 {
 	bool correct = true;
 	int col = in->col;
@@ -94,7 +95,7 @@ inline void matrix_check(MatrixIn *in, MatrixOut *out)
 	fprintf(stderr, "%s result!\n", correct ? "Correct": "Wrong");
 }
 
-inline void init_random(MatrixIn *in)
+inline void init_random(MatrixIn<int> *in)
 {
 	std::default_random_engine random_engine;
 	std::uniform_int_distribution<int> urandom_gen(0, 1000);
