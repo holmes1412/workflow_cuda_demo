@@ -1,8 +1,8 @@
 #ifndef __CUDA_MATMUL_H__
 #define __CUDA_MATMUL_H__
 
-#include "CUDATask.h"
-#include "workflow/WFGlobal.h"
+#include "CudaTask.h"
+//#include "workflow/WFGlobal.h"
 
 #define cuda_print(X) \
 {\
@@ -26,27 +26,32 @@ __global__ void matrix_mul_gpu(int *a, int* b, int* c, int width)
     c[j * width + i] = sum;
 }
 
+/*
 template<class INPUT, class OUTPUT>
-class CudaMatMulSyncTask : public CudaSyncTask<INPUT, OUTPUT>
+class CudaMemcpyTask : public WFCudaTask<INPUT, OUTPUT>
 {
 public:
-	CudaMatMulSyncTask(ExecQueue *queue, Executor *executor,
-			   dim3 grid, dim3 block,
-			   std::function<void (WFThreadTask<INPUT, OUTPUT> *)>&& cb) :
-		CudaSyncTask<INPUT, OUTPUT>(queue, executor, this->stream, std::move(cb))
+	CudaMemcpyTask(cudaStream_t stream, )
+};
+*/
+
+template<class INPUT, class OUTPUT>
+class CudaMatMulTask : public WFCudaTask<INPUT, OUTPUT>
+{
+public:
+	CudaMatMulTask(ExecQueue *queue, Executor *executor,
+				   dim3 grid, dim3 block,
+				   std::function<void (WFThreadTask<INPUT, OUTPUT> *)>&& cb) :
+		WFCudaTask<INPUT, OUTPUT>(queue, executor, this->stream, std::move(cb))
 	{
 		this->grid = grid;
 		this->block = block;
 		this->stream = nullptr;
-		this->start_event = nullptr;
-		this->end_event = nullptr;
 	}
 
-	virtual ~CudaMatMulSyncTask()
+	virtual ~CudaMatMulTask()
 	{
 		cudaStreamDestroy(this->stream);
-		cudaEventDestroy(this->start_event);
-		cudaEventDestroy(this->end_event);
 	}
 
 	virtual void dispatch();
@@ -62,11 +67,10 @@ private:
 	OUTPUT device_output;
 	dim3 grid;
 	dim3 block;
-	cudaEvent_t start_event, end_event;// just for debug
 };
 
 template<class INPUT, class OUTPUT>
-void CudaMatMulSyncTask<INPUT, OUTPUT>::dispatch()
+void CudaMatMulTask<INPUT, OUTPUT>::dispatch()
 {
 	INPUT *in = &this->input;
 	OUTPUT *out = &this->output;
@@ -82,22 +86,17 @@ void CudaMatMulSyncTask<INPUT, OUTPUT>::dispatch()
 	cudaMalloc((void**)&d_in->b, size);
 	cudaMalloc((void**)&d_out->c, size);
 
+//	cudaMemcpyAsync(d_in->a, in->a, size, cudaMemcpyHostToDevice, this->stream);
 	cudaMemcpy(d_in->a, in->a, size, cudaMemcpyHostToDevice);
 	cudaMemcpy(d_in->b, in->b, size, cudaMemcpyHostToDevice);
 
-	cuda_print(cudaStreamCreate(&this->stream));
-	cuda_print(cudaEventCreate(&this->start_event));
-	cuda_print(cudaEventCreate(&this->end_event));
-			
-	cuda_print(cudaEventRecord(this->start_event, this->stream));
-	cuda_print(cudaEventQuery(this->start_event));
-	cuda_print(cudaEventQuery(this->end_event));
-	cuda_print(cudaStreamQuery(this->stream));
+//	cuda_print(cudaStreamCreate(&this->stream));
+//	cuda_print(cudaStreamQuery(this->stream));
 
 	matrix_mul_gpu <<< this->grid, this->block, 0, this->stream >>>
 				(d_in->a, d_in->b, d_out->c, in->col);
 
-	this->CudaSyncTask<INPUT, OUTPUT>::dispatch();
+	this->WFCudaTask<INPUT, OUTPUT>::dispatch();
 	return;
 /*
 	// other error
@@ -108,13 +107,11 @@ void CudaMatMulSyncTask<INPUT, OUTPUT>::dispatch()
 }
 
 template<class INPUT, class OUTPUT>
-SubTask *CudaMatMulSyncTask<INPUT, OUTPUT>::done()
+SubTask *CudaMatMulTask<INPUT, OUTPUT>::done()
 {
 	SeriesWork *series = series_of(this);
 
-	INPUT *in = &this->input;
 	OUTPUT *out = &this->output;
-
 	INPUT *d_in = &this->device_input;
 	OUTPUT *d_out = &this->device_output;
 
@@ -122,15 +119,7 @@ SubTask *CudaMatMulSyncTask<INPUT, OUTPUT>::done()
 
 	cudaMemcpy(out->c, d_out->c, size, cudaMemcpyDeviceToHost);
 
-	cuda_print(cudaEventRecord(this->end_event, this->stream));
-	cuda_print(cudaEventQuery(this->start_event));
-	cuda_print(cudaEventQuery(this->end_event));
 	cuda_print(cudaStreamQuery(this->stream));
-
-	cuda_print(cudaEventSynchronize(this->end_event));
-//	float runtime = 0.0f;
-//	cudaEventElapsedTime(&runtime, this->start_event, this->end_event);
-//	fprintf(stderr, "get runtime from event: %ls micro seconds\n", runtime);
 
 	cudaFree(d_in->a);
 	cudaFree(d_in->b);
@@ -202,28 +191,10 @@ void CudaMatMulAsyncTask<INPUT, OUTPUT>::dispatch()
 	cudaMemcpy(d_in->b, in->b, size, cudaMemcpyHostToDevice);
 
 	cuda_print(cudaStreamCreate(&this->stream));
-/*
-	cuda_print(cudaEventCreate(&this->start_event));
-	cuda_print(cudaEventCreate(&this->end_event));
-			
-	cuda_print(cudaEventRecord(this->start_event, this->stream));
-	cuda_print(cudaEventQuery(this->start_event));
-	cuda_print(cudaEventQuery(this->end_event));
-	cuda_print(cudaStreamQuery(this->stream));
-*/	
+
 	matrix_mul_gpu <<< this->grid, this->block, 0, this->stream >>>
 				(d_in->a, d_in->b, d_out->c, in->col);
 
-//TODO
-/*
-	fprintf(stderr, "a[0]=%d b[0]=%d out->c[0]=%d\n",
-			in->a[0], in->b[0], out->c[0]);
-	cuda_print(cudaMemcpy(out->c, d_out->c, size, cudaMemcpyDeviceToHost));
-	fprintf(stderr, "a[0]=%d b[0]=%d out->c[0]=%d\n",
-			in->a[0], in->b[0], out->c[0]);
-
-
-*/
 	fprintf(stderr, "dispatch() stream_addr %lu\n", this->stream);
 	this->CudaAsyncTask<INPUT, OUTPUT>::dispatch();
 	return;
@@ -240,33 +211,19 @@ SubTask *CudaMatMulAsyncTask<INPUT, OUTPUT>::done()
 {
 	SeriesWork *series = series_of(this);
 
-	INPUT *in = &this->input;
 	OUTPUT *out = &this->output;
 
 	INPUT *d_in = &this->device_input;
 	OUTPUT *d_out = &this->device_output;
 
 	int size = out->row * out->col * sizeof(int);
-/*
-	cuda_print(cudaEventRecord(this->end_event, this->stream));
-	cuda_print(cudaEventQuery(this->start_event));
-	cuda_print(cudaEventQuery(this->end_event));
-	cuda_print(cudaStreamQuery(this->stream));
+
+	cuda_print(cudaMemcpy(out->c, d_out->c, size, cudaMemcpyDeviceToHost));
 
 	cuda_print(cudaEventSynchronize(this->end_event));
-*/
-	fprintf(stderr, "a[0]=%d b[0]=%d out->c[0]=%d d_out_size=%d %d\n",
-			in->a[0], in->b[0], out->c[0], d_out->row, d_out->col);
-	memset(out->c, 0, size);
-	cuda_print(cudaMemcpy(out->c, d_out->c, size, cudaMemcpyDeviceToHost));
-	cuda_print(cudaMemcpy(out->c, d_out->c, size, cudaMemcpyDeviceToHost));
-	fprintf(stderr, "a[0]=%d b[0]=%d out->c[0]=%d\n",
-			in->a[0], in->b[0], out->c[0]);
-
-//	cuda_print(cudaEventSynchronize(this->end_event));
-//	float runtime = 0.0f;
-//	cudaEventElapsedTime(&runtime, this->start_event, this->end_event);
-//	fprintf(stderr, "get runtime from event: %ls micro seconds\n", runtime);
+	float runtime = 0.0f;
+	cudaEventElapsedTime(&runtime, this->start_event, this->end_event);
+	fprintf(stderr, "get runtime from event: %ls micro seconds\n", runtime);
 
 	cudaFree(d_in->a);
 	cudaFree(d_in->b);
@@ -278,23 +235,24 @@ SubTask *CudaMatMulAsyncTask<INPUT, OUTPUT>::done()
 // Factory start
 
 template<class INPUT, class OUTPUT>
-using cuda_sync_callback = std::function<void (WFThreadTask<INPUT, OUTPUT> *)>;
+using cuda_callback = std::function<void (WFThreadTask<INPUT, OUTPUT> *)>;
 
 template<class INPUT, class OUTPUT>
 using cuda_async_callback = std::function<void (CudaAsyncTask<INPUT, OUTPUT> *)>;
 
-class CUDATaskFactory
+class CudaTaskFactory
 {
 public:
-	template<class INPUT, class OUTPUT, class CB = cuda_sync_callback<INPUT, OUTPUT>>
-	static CudaMatMulSyncTask<INPUT, OUTPUT> *create_matmul_sync_task(const std::string& queue_name,
-															 		  dim3 grid, dim3 block,
-															 		  CB callback)
+	template<class INPUT, class OUTPUT, class CB = cuda_callback<INPUT, OUTPUT>>
+	static CudaMatMulTask<INPUT, OUTPUT> *create_matmul_task(dim3 grid,
+															 dim3 block,
+															 CB callback)
 	{
-		Executor *executor = WFGlobal::get_compute_executor();
-		ExecQueue *queue = WFGlobal::get_exec_queue(queue_name);
-		auto *task = new CudaMatMulSyncTask<INPUT, OUTPUT>(queue, executor, grid, block,
-														   std::move(callback));
+		Executor *executor = CudaGlobal::get_instance()->get_executor();
+		ExecQueue *queue = CudaGlobal::get_instance()->get_queue();
+		auto *task = new CudaMatMulTask<INPUT, OUTPUT>(queue, executor,
+													   grid, block,
+													   std::move(callback));
 		return task;
 	}
 

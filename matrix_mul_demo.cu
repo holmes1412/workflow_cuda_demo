@@ -11,25 +11,11 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 bool finish = false;
 
-typedef WFThreadTask<MatrixIn, MatrixOut> MatMulSyncTask;
+typedef WFThreadTask<MatrixIn, MatrixOut> MatMulTask;
 
-void check_sync_result(MatMulSyncTask *task)
+void check_sync_result(MatMulTask *task)
 {
 	fprintf(stderr, "checking in ThreadTask callback.\n");
-	MatrixIn *in = task->get_input();
-	MatrixOut *out = task->get_output();
-	matrix_check(in, out);
-    pthread_mutex_lock(&mutex);
-    finish = true;
-    pthread_cond_signal(&cond);
-    pthread_mutex_unlock(&mutex);
-}
-
-typedef CudaAsyncTask<MatrixIn, MatrixOut> MatMulAsyncTask;
-
-void check_async_result(MatMulAsyncTask *task)
-{
-	fprintf(stderr, "checking in AsyncTask callback.\n");
 	MatrixIn *in = task->get_input();
 	MatrixOut *out = task->get_output();
 	matrix_check(in, out);
@@ -49,9 +35,8 @@ int main()
 	MatrixOut *out;
 
 	// test thread sync task
-	std::string queue_name = "cuda_matrix_mul";
-	MatMulSyncTask *sync_task = CUDATaskFactory::create_matmul_sync_task<MatrixIn, MatrixOut>
-									(queue_name, block_num, thread_per_block, check_sync_result);
+	MatMulTask *sync_task = CudaTaskFactory::create_matmul_task<MatrixIn, MatrixOut>
+									(block_num, thread_per_block, check_sync_result);
 
 	in = sync_task->get_input();
 	out = sync_task->get_output();
@@ -70,8 +55,13 @@ int main()
     while (!finish)
         pthread_cond_wait(&cond, &mutex);
     pthread_mutex_unlock(&mutex);
+
+	free(in->a);
+	free(in->b);
+	free(out->c);
 /*
 	// test async task
+
 	MatMulAsyncTask *async_task = CUDATaskFactory::create_matmul_async_task<MatrixIn, MatrixOut>
 										(block_num, thread_per_block, check_async_result);
 
@@ -92,6 +82,10 @@ int main()
     while (!finish)
         pthread_cond_wait(&cond, &mutex);
     pthread_mutex_unlock(&mutex);
+
+	free(in->a);
+	free(in->b);
+	free(out->c);
 */
 	return 0;
 }

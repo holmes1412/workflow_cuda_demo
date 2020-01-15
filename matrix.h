@@ -77,9 +77,9 @@ inline void matrix_check(MatrixIn *in, MatrixOut *out)
 	int *c = out->c;
 	int *cref = (int *)malloc(size);
 
+	fprintf(stderr, "c[0]=%d\n", c[0]);
 	matrix_mul_cpu(a, b, cref, col);
-
-	fprintf(stderr, "c[0]=%d cref[0]=%d\n", c[0], cref[0]);
+	fprintf(stderr, "cref[0]=%d\n", cref[0]);
 
 	for (int i = 0; i < row * col; i++)
 	{
