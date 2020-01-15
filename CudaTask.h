@@ -89,10 +89,11 @@ public:
 		this->status = status;
 	}
 
-	WFCudaTask(ExecQueue *queue, Executor *executor,
-			   cudaStream_t stream,
+	WFCudaTask(cudaStream_t stream,
 			   std::function<void (WFThreadTask<INPUT, OUTPUT> *)>&& cb) :
-			WFThreadTask<INPUT, OUTPUT>(queue, executor, std::move(cb))
+			WFThreadTask<INPUT, OUTPUT>(CudaGlobal::get_instance()->get_queue(),
+										CudaGlobal::get_instance()->get_executor(),
+										std::move(cb))
 	{
 		this->stream = stream;
 		this->user_data = NULL;

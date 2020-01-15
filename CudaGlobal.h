@@ -4,7 +4,7 @@
 #include "workflow/Executor.h"
 #include "workflow/WFGlobal.h"
 
-//TODO: DEFAULT_CUDA_WAIT_THREADS
+#define DEFAULT_CUDA_WAIT_THREADS 4
 
 class CudaGlobal
 {
@@ -29,12 +29,7 @@ public:
 
 	CudaGlobal()
 	{
-		int cuda_wait_threads = 4;
-/*
-	    int cuda_wait_threads = g_cuda_setting.cuda_wait_threads;
-        if (cuda_wait_threads <= 0)
-            cuda_wait_threads = DEFAULT_CUDA_WAIT_THREADS;
-*/
+		int cuda_wait_threads = DEFAULT_CUDA_WAIT_THREADS;
         int ret = this->executor.init(cuda_wait_threads);
         if (ret < 0)
             abort();

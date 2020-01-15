@@ -39,10 +39,9 @@ template<class INPUT, class OUTPUT>
 class CudaMatMulTask : public WFCudaTask<INPUT, OUTPUT>
 {
 public:
-	CudaMatMulTask(ExecQueue *queue, Executor *executor,
-				   dim3 grid, dim3 block,
+	CudaMatMulTask(dim3 grid, dim3 block,
 				   std::function<void (WFThreadTask<INPUT, OUTPUT> *)>&& cb) :
-		WFCudaTask<INPUT, OUTPUT>(queue, executor, this->stream, std::move(cb))
+		WFCudaTask<INPUT, OUTPUT>(this->stream, std::move(cb))
 	{
 		this->grid = grid;
 		this->block = block;
@@ -248,10 +247,7 @@ public:
 															 dim3 block,
 															 CB callback)
 	{
-		Executor *executor = CudaGlobal::get_instance()->get_executor();
-		ExecQueue *queue = CudaGlobal::get_instance()->get_queue();
-		auto *task = new CudaMatMulTask<INPUT, OUTPUT>(queue, executor,
-													   grid, block,
+		auto *task = new CudaMatMulTask<INPUT, OUTPUT>(grid, block,
 													   std::move(callback));
 		return task;
 	}
