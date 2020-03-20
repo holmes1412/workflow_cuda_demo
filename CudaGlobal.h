@@ -10,10 +10,10 @@ class CudaGlobal
 {
 public:
 	static CudaGlobal *get_instance()
-    {
-        static CudaGlobal cuda_global_instance;
-        return &cuda_global_instance;
-    }
+	{
+		static CudaGlobal cuda_global_instance;
+		return &cuda_global_instance;
+	}
 
 	static Executor *get_executor()
 	{
@@ -30,9 +30,9 @@ public:
 	CudaGlobal()
 	{
 		int cuda_wait_threads = DEFAULT_CUDA_WAIT_THREADS;
-        int ret = this->executor.init(cuda_wait_threads);
-        if (ret < 0)
-            abort();
+		int ret = this->executor.init(cuda_wait_threads);
+		if (ret < 0)
+			abort();
 		this->queue.init();
 	}
 

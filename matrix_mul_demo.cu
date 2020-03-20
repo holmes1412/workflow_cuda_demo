@@ -22,15 +22,15 @@ void check_sync_result(MatMulTask *task)
 	matrix_in *in = task->get_input();
 	matrix_out *out = task->get_output();
 	matrix_check(in, out);
-    pthread_mutex_lock(&mutex);
-    finish = true;
-    pthread_cond_signal(&cond);
-    pthread_mutex_unlock(&mutex);
+	pthread_mutex_lock(&mutex);
+	finish = true;
+	pthread_cond_signal(&cond);
+	pthread_mutex_unlock(&mutex);
 }
 
 int main()
 {	
-    dim3 thread_per_block(16, 16);
+	dim3 thread_per_block(16, 16);
 	dim3 block_num((COL + thread_per_block.x - 1) / thread_per_block.x,
 				   (ROW + thread_per_block.y - 1) / thread_per_block.y);
 
@@ -54,10 +54,10 @@ int main()
 	fprintf(stderr, "start sync thread task\n");
 	sync_task->start();
 
-    pthread_mutex_lock(&mutex);
-    while (!finish)
-        pthread_cond_wait(&cond, &mutex);
-    pthread_mutex_unlock(&mutex);
+	pthread_mutex_lock(&mutex);
+	while (!finish)
+		pthread_cond_wait(&cond, &mutex);
+	pthread_mutex_unlock(&mutex);
 
 	free(in->a);
 	free(in->b);
@@ -81,10 +81,10 @@ int main()
 	fprintf(stderr, "start async request task\n");
 	async_task->start();
 
-    pthread_mutex_lock(&mutex);
-    while (!finish)
-        pthread_cond_wait(&cond, &mutex);
-    pthread_mutex_unlock(&mutex);
+	pthread_mutex_lock(&mutex);
+	while (!finish)
+		pthread_cond_wait(&cond, &mutex);
+	pthread_mutex_unlock(&mutex);
 
 	free(in->a);
 	free(in->b);
