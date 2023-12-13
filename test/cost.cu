@@ -1,8 +1,9 @@
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <chrono>
+#include <nvml.h>
 
-#define GET_CURRENT_MICRO    std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()
+#define GET_CURRENT_MICRO	std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now().time_since_epoch()).count()
 
 #define cuda_print(X) \
 {\
@@ -11,7 +12,7 @@
 	#X, err, cudaGetErrorName(err));\
 }
 
-#define N 16
+#define N 33
 
 float a[N][N];
 float b[N][N];
@@ -25,14 +26,18 @@ uint64_t begin, end;
 cudaError_t status;
 float epsilon = 0.0001;
 
-dim3 thread_per_block(N, N);
 int block_num = 1;
+
+dim3 thread_per_block(N, N); // this is grid
+dim3 block(N / thread_per_block.x, N / thread_per_block.y); // block_num
 
 __global__ void sum_matrix_parallel(float a[N][N], float b[N][N], float c[N][N])
 {
-	int i = threadIdx.x;
-	int j = threadIdx.y;
-	c[i][j] = a[i][j] + b[i][j];
+	int i = blockIdx.x * blockDim.x + threadIdx.x;
+	int j = blockIdx.y * blockDim.y + threadIdx.y;
+	if (i < N && j < N) {
+		c[i][j] = a[i][j] + b[i][j];
+	}
 }
 
 __global__ void sum_matrix_serial(float a[N][N], float b[N][N], float c[N][N])
@@ -62,6 +67,34 @@ void print_parameters()
 
 		printf("\n");
 	}
+}
+
+void print_utilization()
+{
+	nvmlDevice_t device;
+	nvmlUtilization_t utilization;
+
+	begin = GET_CURRENT_MICRO;
+	nvmlInit();
+	end = GET_CURRENT_MICRO;
+	printf("nvmlInit cost = %llu\n", end - begin);
+
+	begin = GET_CURRENT_MICRO;
+	nvmlDeviceGetHandleByIndex(0, &device);
+	end = GET_CURRENT_MICRO;
+	printf("nvmlDeviceGetHandleByIndex cost = %llu\n", end - begin);
+
+	begin = GET_CURRENT_MICRO;
+	nvmlDeviceGetUtilizationRates(device, &utilization);
+	end = GET_CURRENT_MICRO;
+	printf("nvmlDeviceGetUtilizationRates cost = %llu\n", end - begin);
+
+	printf("GPU utilization: %d%%\n", utilization.gpu);
+	printf("Memory utilization: %d%%\n", utilization.memory);
+
+	nvmlShutdown();
+	end = GET_CURRENT_MICRO;
+	printf("nvmlShutdown cost = %llu\n", end - begin);
 }
 
 int init_and_malloc()
@@ -106,12 +139,24 @@ int init_and_malloc()
 void test_parallel()
 {
 	sum_matrix_parallel<<<block_num, thread_per_block>>>(d_a, d_b, d_c);
+	status = cudaGetLastError();
+	if (status != cudaSuccess) {
+		cuda_print(status);
+		return;
+	}
+
 	cudaDeviceSynchronize();
 }
 
 void test_serial()
 {
 	sum_matrix_serial<<<block_num, 1>>>(d_a, d_b, d_c);
+	status = cudaGetLastError();
+	if (status != cudaSuccess) {
+		cuda_print(status);
+		return;
+	}
+
 	cudaDeviceSynchronize();
 }
 
@@ -151,6 +196,8 @@ void copy_and_check()
 int main()
 {
 //	print_parameters();
+
+//	print_utilization();
 
 	if (init_and_malloc() != 0) {
 		printf("init_and_malloc() failed.\n");
