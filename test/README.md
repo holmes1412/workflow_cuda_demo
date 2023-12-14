@@ -25,7 +25,9 @@ So we cannot run more than 1024 parallely in one block.
 
 The following experiments will set block_num = 1 and thread_per_block = N * N.
 
-|N| cudaMalloc | cudaMemcpy | parallel | serial | cudaFree| 
+First time to use cuda may cose 305735(us). So the following cost of cudaMalloc should minus 300ms.
+
+|N\cost(us)| cudaMalloc | cudaMemcpy | parallel | serial | cudaFree| 
 | :---: | :---: | :---: | :---: | :---: | :---: |
 |15|422921|35|8|18|96|
 |16|399609|32|9|19|88|

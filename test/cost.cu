@@ -1,3 +1,7 @@
+/*
+ * nvcc cost.cu -lnvidia-ml
+ */
+
 #include <cuda_runtime.h>
 #include <stdio.h>
 #include <chrono>
@@ -12,7 +16,7 @@
 	#X, err, cudaGetErrorName(err));\
 }
 
-#define N 33
+#define N 32
 
 float a[N][N];
 float b[N][N];
@@ -52,9 +56,11 @@ void print_parameters()
 	int devicecount;
 	cudaGetDeviceCount(&devicecount);
 
+	cudaDeviceProp deviceProp;
+	int sharedMemSize;
+
 	for (int i = 0; i < devicecount; ++i)
 	{
-		cudaDeviceProp deviceProp;
 		cudaGetDeviceProperties(&deviceProp, i);
 
 		printf("Device %d: %s\n", i, deviceProp.name);
@@ -65,6 +71,10 @@ void print_parameters()
 		printf("Max Threads per Multiprocessor: %d\n",
 			   deviceProp.maxThreadsPerMultiProcessor);
 
+		cudaDeviceGetAttribute(&sharedMemSize,
+							   cudaDevAttrMaxSharedMemoryPerBlock, i);
+		printf("Max shared memory size : %d\n", sharedMemSize);
+
 		printf("\n");
 	}
 }
@@ -73,6 +83,12 @@ void print_utilization()
 {
 	nvmlDevice_t device;
 	nvmlUtilization_t utilization;
+
+	cudaSetDevice(0);
+	begin = GET_CURRENT_MICRO;
+	cudaSetDevice(1);
+	end = GET_CURRENT_MICRO;
+	printf("cudaSetDevice cost = %llu\n", end - begin);
 
 	begin = GET_CURRENT_MICRO;
 	nvmlInit();
@@ -197,7 +213,7 @@ int main()
 {
 //	print_parameters();
 
-//	print_utilization();
+	print_utilization();
 
 	if (init_and_malloc() != 0) {
 		printf("init_and_malloc() failed.\n");
