@@ -253,7 +253,7 @@ public:
 	}
 
 	template<class INPUT, class OUTPUT, class CB = cuda_async_callback<INPUT, OUTPUT>>	
-	static  CudaMatMulAsyncTask<INPUT, OUTPUT> *create_matmul_async_task(dim3 grid,
+	static CudaMatMulAsyncTask<INPUT, OUTPUT> *create_matmul_async_task(dim3 grid,
 																		 dim3 block,
 																		 CB callback)
 	{

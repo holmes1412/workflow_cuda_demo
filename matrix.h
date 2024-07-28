@@ -78,10 +78,12 @@ inline void matrix_check(MatrixIn<int> *in, MatrixOut<int> *out)
 	int *c = out->c;
 	int *cref = (int *)malloc(size);
 
+	fprintf(stderr, "checking the first element, please wait...\n");
 	fprintf(stderr, "c[0]=%d\n", c[0]);
 	matrix_mul_cpu(a, b, cref, col);
 	fprintf(stderr, "cref[0]=%d\n", cref[0]);
 
+	fprintf(stderr, "checking all matrix, please wait...\n");
 	for (int i = 0; i < row * col; i++)
 	{
 		if (c[i] != cref[i])
